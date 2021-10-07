@@ -33,11 +33,11 @@ namespace TelegramBot
             var textType = e.Message.Type;
             var textWithKey = e.Message.Text;
             string text = "";
-            var key = textWithKey.Last();
 
             var chatId = e.Message.Chat.Id;
             if (textType.ToString() == "Text")
             {
+                var key = textWithKey.Last();
                 char[] textCh = new char[textWithKey.Length - 1];
                 for (int a = 0; a < textWithKey.Length - 1; a++)
                 {
