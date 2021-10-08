@@ -8,15 +8,22 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using System.Threading;
 using static System.Net.Mime.MediaTypeNames;
+using System.Data.SqlClient;
+using System.Data;
+using System.Threading.Tasks;
 
 namespace TelegramBot
 {
     class Program
     {
         private static ITelegramBotClient bot;
-        private static TestDBContext _TestDB;
-        static void Main(string[] args)
+        private static SqlConnection connection;
+        static async Task Main(string[] args)
         {
+            string connectionString = "Server=MiniComp\\MSSQLSWRVER;Database=TestDB;Trusted_Connection=True; Pooling = true";
+
+            // Создание подключения
+            connection = new SqlConnection(connectionString);
             var token = "2088298335:AAF8kMX_k-muZfxgj6Lx1XsP8HpCeUdWvyY";
             bot = new TelegramBotClient(token);
             bot.OnMessage += Bot_OnMessage;
@@ -29,7 +36,12 @@ namespace TelegramBot
 
         private static async void Bot_OnMessage(object sender, MessageEventArgs e)
         {
-            _TestDB = new TestDBContext();
+            if(connection.State == ConnectionState.Open)
+            {
+            await connection.CloseAsync();
+            }
+
+            await connection.OpenAsync();
             var textType = e.Message.Type;
             var textWithKey = e.Message.Text;
             string text = "";
@@ -66,18 +78,27 @@ namespace TelegramBot
                        chatId: chatId,
                        text: "Информация по пользователю за Май месяц:"
                       );
+                        SqlCommand selectCountChecksM = new SqlCommand("SELECT CONVERT(VARCHAR(10), COUNT(check_date) , 25) AS [YYYY/MM/DD] FROM tblTransactions WHERE UserPhoneNumber=" + text + "AND CONVERT(VARCHAR(10), (check_date) , 25) BETWEEN '2021-05-10' AND '2021-06-01'", connection);
+                        var CountM = selectCountChecksM.ExecuteScalar();
                         await bot.SendTextMessageAsync(
                                                chatId: chatId,
-                                               text: $"Количество чеков за владельцем этого номера на Май месяц числится: {_TestDB.TblTransactions.Where(d => d.UserPhoneNumber == text && d.CheckDate.Value.Month == 5).Count()}"
+                                               text: $"Количество чеков за владельцем этого номера на Май месяц числится: {CountM}"
                                               );
+                        CountM = null;
+                        SqlCommand selectSumSkuM = new SqlCommand("SELECT SUM(check_count_sku) FROM tblTransactions WHERE UserPhoneNumber='"+ text +"' AND CONVERT(VARCHAR(10), (check_date) , 25) BETWEEN '2021-05-10' AND '2021-06-01'", connection);
+                        var SumM = selectSumSkuM.ExecuteScalar();
                         await bot.SendTextMessageAsync(
                            chatId: chatId,
-                           text: $"Количество товаров куплено: {_TestDB.TblTransactions.Where(d => d.UserPhoneNumber == text && d.CheckDate.Value.Month == 5).Select(b => b.CheckCountSku).ToArray().Sum()}"
+                           text: $"Количество товаров куплено: {SumM}"
                           );
+                        SumM = null;
+                        SqlCommand selectSumBonusM = new SqlCommand("SELECT SUM(UserBonuses) FROM tblCheckBonusesUser WHERE UserPhoneNumber='" + text + "' AND CONVERT(VARCHAR(10), (AddBonusesDate) , 25) BETWEEN '2021-05-10' AND '2021-06-01'", connection);
+                        var BonusSumM = selectSumBonusM.ExecuteScalar();
                         await bot.SendTextMessageAsync(
                            chatId: chatId,
-                           text: $"Заработано за месяц бонусов: {_TestDB.TblCheckBonusesUsers.Where(d => d.UserPhoneNumber == text && d.AddBonusesDate.Month == 5).Select(b => b.UserBonuses).ToArray().Sum()}"
+                           text: $"Заработано за месяц бонусов: {BonusSumM}"
                           );
+                        BonusSumM = null;
                     }
                     else
                     {
@@ -85,20 +106,28 @@ namespace TelegramBot
                        chatId: chatId,
                        text: "Информация по пользователю за последнюю неделю:"
                       );
-                        var maxDate = _TestDB.TblTransactions.OrderByDescending(t => t.CheckDate).FirstOrDefault().CheckDate;
-                        var chekDate = maxDate.Value.AddDays(-7);
+                        SqlCommand getLastDate = new SqlCommand("SELECT MAX (AddBonusesDate) FROM tblCheckBonusesUser", connection);
+                        var LastDate = getLastDate.ExecuteScalar();
+                        SqlCommand selectCountChecksW = new SqlCommand("SELECT COUNT(check_date) FROM tblTransactions WHERE UserPhoneNumber='" + text + "'AND CONVERT(VARCHAR(10), check_date, 25) BETWEEN CONVERT(VARCHAR(10), DATEADD(DAY, -7, '" + LastDate + "'), 25) AND CONVERT(VARCHAR(10), '" + LastDate + "' , 25)", connection);
+                        var CountW = selectCountChecksW.ExecuteScalar();
                         await bot.SendTextMessageAsync(
                                                chatId: chatId,
-                                               text: $"Количество чеков за последнюю неделю: {_TestDB.TblTransactions.Where(d => d.UserPhoneNumber == text && d.CheckDate.Value > chekDate && d.CheckDate.Value <= maxDate).Count()}"
+                                               text: $"Количество чеков за последнюю неделю: {CountW}"
                                               );
+                        SqlCommand selectSumSkuW = new SqlCommand("SELECT SUM(check_count_sku) FROM tblTransactions WHERE UserPhoneNumber='"+ text + "' AND CONVERT(VARCHAR(10), (check_date) , 25) BETWEEN CONVERT(VARCHAR(10), DATEADD(DAY, -7, '" + LastDate + "'), 25) AND CONVERT(VARCHAR(10), '" + LastDate + "' , 25)", connection);
+                        var SumW = selectSumSkuW.ExecuteScalar();
                         await bot.SendTextMessageAsync(
                            chatId: chatId,
-                           text: $"Количество товаров куплено: {_TestDB.TblTransactions.Where(d => d.UserPhoneNumber == text && d.CheckDate.Value > chekDate && d.CheckDate.Value <= maxDate).Select(b => b.CheckCountSku).ToArray().Sum()}"
+                           text: $"Количество товаров куплено: {SumW}"
                           );
+                        SqlCommand selectSumBonusW = new SqlCommand("SELECT SUM(UserBonuses) FROM tblCheckBonusesUser WHERE UserPhoneNumber='" + text + "' AND CONVERT(VARCHAR(10), (AddBonusesDate) , 25) BETWEEN CONVERT(VARCHAR(10), DATEADD(DAY, -7, '" + LastDate + "'), 25) AND CONVERT(VARCHAR(10), '" + LastDate + "' , 25)", connection);
+                        var BonusSumW = selectSumBonusW.ExecuteScalar();
+                        
                         await bot.SendTextMessageAsync(
                            chatId: chatId,
-                           text: $"Заработано за месяц бонусов: {_TestDB.TblCheckBonusesUsers.Where(d => d.UserPhoneNumber == text && d.AddBonusesDate > chekDate && d.AddBonusesDate <= maxDate).Select(b => b.UserBonuses).ToArray().Sum()}"
+                           text: $"Заработано за месяц бонусов: {BonusSumW}"
                           );
+                        await connection.CloseAsync();
                     }
 
                 }
