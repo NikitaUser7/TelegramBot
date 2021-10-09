@@ -78,21 +78,21 @@ namespace TelegramBot
                        chatId: chatId,
                        text: "Информация по пользователю за Май месяц:"
                       );
-                        SqlCommand selectCountChecksM = new SqlCommand("SELECT CONVERT(VARCHAR(10), COUNT(check_date) , 25) AS [YYYY/MM/DD] FROM tblTransactions WHERE UserPhoneNumber=" + text + "AND CONVERT(VARCHAR(10), (check_date) , 25) BETWEEN '2021-05-10' AND '2021-06-01'", connection);
+                        SqlCommand selectCountChecksM = new SqlCommand("SELECT CONVERT(VARCHAR(10), COUNT(check_date) , 25) AS [YYYY/MM/DD] FROM tblTransactions WHERE UserPhoneNumber=" + text + "AND CONVERT(VARCHAR(10), (check_date) , 25) BETWEEN '2021-04-31' AND '2021-06-01'", connection);
                         var CountM = selectCountChecksM.ExecuteScalar();
                         await bot.SendTextMessageAsync(
                                                chatId: chatId,
                                                text: $"Количество чеков за владельцем этого номера на Май месяц числится: {CountM}"
                                               );
                         CountM = null;
-                        SqlCommand selectSumSkuM = new SqlCommand("SELECT SUM(check_count_sku) FROM tblTransactions WHERE UserPhoneNumber='"+ text +"' AND CONVERT(VARCHAR(10), (check_date) , 25) BETWEEN '2021-05-10' AND '2021-06-01'", connection);
+                        SqlCommand selectSumSkuM = new SqlCommand("SELECT SUM(check_count_sku) FROM tblTransactions WHERE UserPhoneNumber='"+ text + "' AND CONVERT(VARCHAR(10), (check_date) , 25) BETWEEN '2021-04-31' AND '2021-06-01'", connection);
                         var SumM = selectSumSkuM.ExecuteScalar();
                         await bot.SendTextMessageAsync(
                            chatId: chatId,
                            text: $"Количество товаров куплено: {SumM}"
                           );
                         SumM = null;
-                        SqlCommand selectSumBonusM = new SqlCommand("SELECT SUM(UserBonuses) FROM tblCheckBonusesUser WHERE UserPhoneNumber='" + text + "' AND CONVERT(VARCHAR(10), (AddBonusesDate) , 25) BETWEEN '2021-05-10' AND '2021-06-01'", connection);
+                        SqlCommand selectSumBonusM = new SqlCommand("SELECT SUM(UserBonuses) FROM tblCheckBonusesUser WHERE UserPhoneNumber='" + text + "' AND CONVERT(VARCHAR(10), (AddBonusesDate) , 25) BETWEEN '2021-04-31' AND '2021-06-01'", connection);
                         var BonusSumM = selectSumBonusM.ExecuteScalar();
                         await bot.SendTextMessageAsync(
                            chatId: chatId,
